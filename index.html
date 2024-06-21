@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="Content-Type" content="application/wasm; charset=utf-8">
+        <title>Claim Link</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <script src="waxjs.js"></script>
+        <script src="sha256.js"></script>
+        <script src="https://unpkg.com/anchor-link@3"></script>
+        <script src="https://unpkg.com/anchor-link-browser-transport@3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+</script>
+
+<script language="javascript">
+  $(document).ready(function() {
+    
+      $("#divlists_table").html("");
+
+  });
+
+  const dapp = "claimlink";
+  let login_use = "";
+  let wallet_userAccount="none";
+  let wallet_session=null;
+
+  const wax = new waxjs.WaxJS({
+      rpcEndpoint: 'https://wax.greymass.com'
+  });
+  
+  const transport = new AnchorLinkBrowserTransport();
+  const anchorLink = new AnchorLink({
+        transport,
+        chains: [{
+          chainId: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
+          nodeUrl: 'https://wax.greymass.com',
+        }]
+  });
+  function loginWax(anchor){
+    login_use=anchor;
+    if (anchor) {
+      login_anchor();
+    }else{
+      login_waxjs().then(function(retorno){
+        wallet_userAccount=retorno;
+        $("#autologin").html(wallet_userAccount);
+        hideLoginButton();
+        wallet_session=wax.api;
+      });        
+    }
+  }
+  function login_anchor(){
+      anchorLink.login(dapp).then((result) => {
+        console.log(result);
+        wallet_session = result.session;          
+        console.log(result.session);
+        wallet_userAccount=wallet_session.auth.actor;
+        console.log(wallet_session.auth.actor);
+        $("#autologin").html(String(wallet_userAccount).split("@")[0]);
+        hideLoginButton();
+      });
+  }
+  async function login_waxjs(){
+    try {
+      let userAccount = await wax.login();
+      return userAccount;
+    } catch (e) {
+      $("#autologin").html(e.message);        
+    }
+    return false;
+  }
+  function logout(){
+    wallet_userAccount="none";
+    if(login_use){
+      //anchorLink.logout();
+      session.remove();        
+      $("#autologin").html("logout");
+    }else{
+      wax.logout();
+      $("#autologin").html("logout");
+    }
+      $("#divlogin").show();
+      $("#divlogout").hide();
+  }
+  function hideLoginButton() {
+    $("#divlogin").hide();
+    $("#divlogout").show();
+    checkToken();
+  }
+  function checkToken(){
+    $("#divlists_table").html("Checking Token...");
+    waxApiUrl ="https://wax.eosphere.io/";
+    
+    //Modify this to the TOKEN contract
+    const TokenContract = "alien.worlds";
+    const TokenSymbol = "TLM";
+
+    jsonData=JSON.stringify({"json":true,"code":TokenContract,"scope":wallet_userAccount,"table":"accounts","limit":10});
+      
+      $.ajax({
+      type: "POST",
+      url: waxApiUrl+"v1/chain/get_table_rows",        
+      data: jsonData,
+      dataType: "json",
+      success: function (data) {
+        TokenFound =false;
+
+        console.log(data.rows);
+        
+        $.each(data.rows, function (index, value) {
+
+          
+          console.log(value);
+          if(value.balance){
+            //$("#divlists_table").html("You have "+value.balance+" "+TokenSymbol);
+            $("#divlists_table").html("The Link is : HTTP ");
+
+            TokenFound =true;
+          }
+          
+        });
+
+        if(!TokenFound){
+            $("#divlists_table").html("You have to have at least 1 "+TokenSymbol+" to claim the link");
+          }
+      },
+      error: function (data) {
+        //console.log(data);
+      },
+      complete: function (data) {
+        //console.log("complete");
+      }
+    });
+
+  }
+  </script>
+</head>
+<body>
+      <p id="autologin"></p>
+      <div id="divlogin">
+        <button id="login" onclick="loginWax(false)">WAX Login</button>
+        <button id="login" onclick="loginWax(true)">Anchor Login</button>
+      </div>
+      <div id="divlogout" style="display:none"><button id="loginout" onclick=logout()>Logout</button></div>
+
+    <div id="divlists">      
+      <div id="divlists_table"></div>
+    </div>
+    </body>
+    </html>
